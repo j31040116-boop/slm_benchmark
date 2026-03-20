@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+benchmark_results.json
+traces.log
+run.log
+.env

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ollama list:*)",
+      "Bash(pip show:*)",
+      "Bash(/opt/anaconda3/bin/pip show:*)",
+      "Bash(/opt/anaconda3/bin/python -c \"from datasets import load_dataset; ds = load_dataset\\(''ChanceFocus/flare-fiqasa'', split=''test''\\); print\\(ds.column_names\\); print\\(ds[0]\\)\")",
+      "Bash(/opt/anaconda3/bin/python -c \":*)",
+      "WebSearch"
+    ]
+  }
+}
