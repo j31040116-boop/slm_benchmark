@@ -30,9 +30,13 @@ from metrics import compute_metrics
 
 def load_results() -> dict:
     p = Path(RESULTS_FILE)
-    if p.exists():
-        return json.loads(p.read_text())
-    return {}
+    if not p.exists():
+        return {}
+    data = json.loads(p.read_text())
+    # Handle organized format produced by organize_results.py
+    if "per_task_detail" in data:
+        return data["per_task_detail"]
+    return data
 
 
 def save_results(results: dict) -> None:
@@ -46,7 +50,7 @@ def log(msg: str) -> None:
 # ── Dataset loader ────────────────────────────────────────────────────────────
 
 def load_task_dataset(task_key: str, cfg: dict):
-    kwargs = {"trust_remote_code": True}
+    kwargs = {}
     if cfg.get("hf_name"):
         kwargs["name"] = cfg["hf_name"]
 
@@ -58,7 +62,8 @@ def load_task_dataset(task_key: str, cfg: dict):
         if gated:
             log(f"  [WARN] Could not load gated dataset {task_key}: {exc}")
             return []
-        raise
+        log(f"  [WARN] Could not load {task_key}: {exc}")
+        return []
 
     text_col  = cfg["text_col"]
     label_col = cfg["label_col"]
@@ -88,7 +93,7 @@ def call_model(prompt: str) -> str:
     response = ollama.chat(
         model=config.MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0.0, "num_predict": config.MAX_TOKENS},
+        options={"temperature": 0.0, "num_predict": config.MAX_TOKENS, "num_ctx": config.NUM_CTX},
         think=config.THINK_MODE,
     )
     raw = response["message"]["content"]
@@ -156,7 +161,7 @@ def check_gpu() -> None:
                 log(f"  [GPU] {name} — VRAM in use: {size_vram / 1e9:.1f} GB")
         else:
             log("  [GPU] No models loaded yet — will load on first call.")
-        log("  [GPU] On Apple M4, Ollama uses Metal automatically. You're on GPU.")
+        log("  [GPU] Ollama is running. Model will use GPU if available.")
     except Exception as exc:
         log(f"  [WARN] Could not reach Ollama: {exc}")
         log("  [WARN] Make sure 'ollama serve' is running in another terminal.")

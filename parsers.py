@@ -68,4 +68,4 @@ def parse_float(text: str) -> float | None:
 
 def normalise_label(text: str) -> str:
     """Lowercase, strip punctuation/whitespace for label comparison."""
-    return re.sub(r"[^a-z0-9\-\.]", "", text.lower()).strip()
+    return re.sub(r"[^a-z0-9\-]", "", text.lower()).strip()

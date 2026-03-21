@@ -12,8 +12,9 @@ THINK_MODE = True                       # thinking model — must stay True
 DEBUG_MODE = False       # True → only first 3 rows per task
 SAVE_EVERY = 10          # auto-save checkpoint every N samples
 MAX_SAMPLES = None       # None = full dataset; int = hard cap per task
-N_WORKERS  = 4           # sweet spot — 8 workers causes Ollama contention on M4
-MAX_TOKENS = 2048        # thinking trace (~400-800 tokens) + answer needs room
+N_WORKERS  = 6           # increased from 4 — Windows/GPU handles more concurrency
+MAX_TOKENS = 1536        # 1024 caused truncation on ACL18; 1536 gives thinking trace room
+NUM_CTX    = 2048        # context window — default Ollama is 4096; 2048 is enough and faster
 
 # ── Output paths ─────────────────────────────────────────────────────────────
 RESULTS_FILE = "benchmark_results.json"
@@ -25,14 +26,15 @@ TRACES_LOG   = "traces.log"
 # schema is non-standard (see slm_eval.py).
 TASKS = {
     "FPB": {
-        "hf_path":  "takala/financial_phrasebank",
-        "hf_name":  "sentences_allagree",
+        "hf_path":  "warwickai/financial_phrasebank_mirror",
+        "hf_name":  None,
         "split":    "train",
         "type":     "classification",   # accuracy + macro-F1
         "text_col": "sentence",
         "label_col":"label",
         # FPB labels: 0=negative, 1=neutral, 2=positive
         "label_map": {0: "negative", 1: "neutral", 2: "positive"},
+        "max_samples": 1000,
     },
     "FiQA-SA": {
         "hf_path":  "ChanceFocus/flare-fiqasa",

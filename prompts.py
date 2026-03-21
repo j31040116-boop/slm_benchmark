@@ -43,8 +43,9 @@ def fiqasa_prompt(text: str) -> str:
 def finer_ord_prompt(text: str) -> str:
     return _wrap(
         "You are a Named Entity Recognition expert for financial documents. "
-        "Classify the overall entity type of the following financial text as "
-        "one of: ORG, PER, LOC, or O (none).",
+        "Does the following token belong to a named entity (such as an "
+        "organisation, person, or location)? Reply with exactly one of: "
+        "entity or O (if not an entity).",
         text,
     )
 
@@ -76,7 +77,7 @@ def ectsum_prompt(text: str) -> str:
 
 def acl18_prompt(text: str) -> str:
     return _wrap(
-        "Classify the following financial tweet as exactly one of: bearish or bullish.",
+        "Classify the following financial tweet as exactly one of: bearish, neutral, or bullish.",
         text,
     )
 
