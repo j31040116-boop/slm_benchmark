@@ -18,7 +18,8 @@ if not _trace_logger.handlers:
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
 _THINK_RE   = re.compile(r"<think>(.*?)</think>", re.DOTALL | re.IGNORECASE)
-_ANSWER_RE  = re.compile(r"Answer:\s*(.+)", re.IGNORECASE)
+_ANSWER_RE  = re.compile(r"Answer[:\s]\s*(.+)", re.IGNORECASE)
+_BOXED_RE   = re.compile(r"\\boxed\{([^}]+)\}")
 
 
 def extract_think(raw: str, task: str = "", sample_id: int = 0) -> str:
@@ -39,6 +40,8 @@ def extract_result(raw: str) -> str:
     """
     # Strip think block first
     cleaned = _THINK_RE.sub("", raw).strip()
+    # Unwrap LaTeX \boxed{X} → X (model sometimes outputs boxed math format)
+    cleaned = _BOXED_RE.sub(r"\1", cleaned).strip()
 
     m = _ANSWER_RE.search(cleaned)
     if m:

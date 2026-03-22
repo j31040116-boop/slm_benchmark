@@ -12,9 +12,9 @@ THINK_MODE = True                       # thinking model — must stay True
 DEBUG_MODE = False       # True → only first 3 rows per task
 SAVE_EVERY = 10          # auto-save checkpoint every N samples
 MAX_SAMPLES = None       # None = full dataset; int = hard cap per task
-N_WORKERS  = 6           # increased from 4 — Windows/GPU handles more concurrency
+N_WORKERS  = 8           # RTX 2080 Ti (11GB): 1.2B model ~2.4GB + ~1.2GB KV at 8 parallel = ~3.6GB total
 MAX_TOKENS = 1536        # 1024 caused truncation on ACL18; 1536 gives thinking trace room
-NUM_CTX    = 2048        # context window — default Ollama is 4096; 2048 is enough and faster
+NUM_CTX    = 4096        # context window — 2048 caused truncation on ConvFinQA (long table inputs)
 
 # ── Output paths ─────────────────────────────────────────────────────────────
 RESULTS_FILE = "benchmark_results.json"
@@ -28,6 +28,9 @@ TASKS = {
     "FPB": {
         "hf_path":  "warwickai/financial_phrasebank_mirror",
         "hf_name":  None,
+        # Financial PhraseBank has no official train/test split; this mirror only
+        # exposes "train". For zero-shot LLM evaluation there is no data-leakage
+        # concern — the model was never trained on these sentences.
         "split":    "train",
         "type":     "classification",   # accuracy + macro-F1
         "text_col": "sentence",
@@ -52,15 +55,19 @@ TASKS = {
         "type":       "classification",
         "text_col":   "gold_token",
         "label_col":  "gold_label",
-        "max_samples": 1000,   # dataset has 30k+ token-level rows — cap it
+        "max_samples": 5000,   # 1000 tokens ≈ 48 sentences with only ~13 entities (1.3%); 5000 ≈ 250 sentences with ~380 entities (7.6%) after shuffle
     },
     "ConvFinQA": {
-        "hf_path":  "AdaptLLM/finance-tasks",
-        "hf_name":  "ConvFinQA",
-        "split":    "test",
-        "type":     "exact_match",      # numeric EM
-        "text_col": "input",
-        "label_col":"label",
+        "hf_path":   "AdaptLLM/finance-tasks",
+        "hf_name":   "ConvFinQA",
+        "split":     "test",
+        "type":      "exact_match",      # numeric EM
+        "text_col":  "input",
+        "label_col": "label",
+        # Long table inputs + deep reasoning exhaust the default token budget.
+        # Per-task overrides: 3072 output tokens, 8192 context window.
+        "max_tokens": 3072,
+        "num_ctx":    8192,
     },
     "FOMC": {
         "hf_path":  "gtfintechlab/fomc_communication",
@@ -71,7 +78,9 @@ TASKS = {
         "label_col":"label",
         "label_map": {0: "dovish", 1: "hawkish", 2: "neutral"},
     },
-    "ECTSum": {
+    "FinSent": {
+        # nickmuchi/financial-classification: financial news sentiment, NOT ECTSum.
+        # ECTSum is a summarization dataset with no classification split.
         "hf_path":  "nickmuchi/financial-classification",
         "hf_name":  None,
         "split":    "test",

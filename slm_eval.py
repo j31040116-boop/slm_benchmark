@@ -16,10 +16,17 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+import os
+
 import ollama
 from datasets import load_dataset
 
 import config
+
+# Wire OLLAMA_HOST from config so remote/non-default hosts work.
+# The ollama SDK reads this env var; setting it here means config.py is the
+# single source of truth rather than requiring a separate env var export.
+os.environ.setdefault("OLLAMA_HOST", config.OLLAMA_HOST)
 from config import TASKS, RESULTS_FILE, SAVE_EVERY, DEBUG_MODE
 from parsers import extract_think, extract_result, parse_float, normalise_label
 from prompts import get_prompt
@@ -70,18 +77,34 @@ def load_task_dataset(task_key: str, cfg: dict):
     label_map = cfg.get("label_map", {})
     samples   = []
 
+    if task_key == "FiNER-ORD":
+        # Group subword tokens by sentence so the model receives full context.
+        # Rows share the same (doc_idx, sent_idx) when they belong to the same sentence.
+        # The test split is ordered by document: early docs are non-financial with almost
+        # no entities (1.3% entity rate in first 1000 tokens vs 7.6% overall). Shuffling
+        # with a fixed seed ensures representative entity coverage before the sample cap.
+        import random
+        from collections import defaultdict
+        sent_map = defaultdict(list)
+        for row in ds:
+            key = (row["doc_idx"], row["sent_idx"])
+            sent_map[key].append((row[text_col], row[label_col]))
+        sent_list = list(sent_map.values())
+        random.Random(42).shuffle(sent_list)
+        for toks in sent_list:
+            sentence = " ".join(t for t, _ in toks)
+            for token, raw_label in toks:
+                label = "entity" if raw_label != 0 else "O"
+                samples.append((f"Sentence: {sentence}\nToken: {token}", label))
+        return samples
+
     for row in ds:
-        if task_key == "FiNER-ORD":
-            text      = str(row[text_col])
-            raw_label = row[label_col]
-            label     = "entity" if raw_label != 0 else "O"
+        text      = str(row[text_col])
+        raw_label = row[label_col]
+        if isinstance(raw_label, int) and label_map:
+            label = label_map[raw_label]
         else:
-            text      = str(row[text_col])
-            raw_label = row[label_col]
-            if isinstance(raw_label, int) and label_map:
-                label = label_map[raw_label]
-            else:
-                label = str(raw_label)
+            label = str(raw_label)
         samples.append((text, label))
 
     return samples
@@ -89,11 +112,11 @@ def load_task_dataset(task_key: str, cfg: dict):
 
 # ── Model call ────────────────────────────────────────────────────────────────
 
-def call_model(prompt: str) -> str:
+def call_model(prompt: str, max_tokens: int = config.MAX_TOKENS, num_ctx: int = config.NUM_CTX) -> str:
     response = ollama.chat(
         model=config.MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0.0, "num_predict": config.MAX_TOKENS, "num_ctx": config.NUM_CTX},
+        options={"temperature": 0.0, "num_predict": max_tokens, "num_ctx": num_ctx},
         think=config.THINK_MODE,
     )
     raw = response["message"]["content"]
@@ -110,7 +133,11 @@ def process_one(task_key: str, cfg: dict, idx: int, text: str, label: str):
     prompt    = get_prompt(task_key, text)
     t0        = time.time()
     try:
-        raw = call_model(prompt)
+        raw = call_model(
+            prompt,
+            max_tokens=cfg.get("max_tokens", config.MAX_TOKENS),
+            num_ctx=cfg.get("num_ctx", config.NUM_CTX),
+        )
     except Exception as exc:
         log(f"  [ERROR] {task_key} sample {idx}: {exc}")
         return None
@@ -172,6 +199,7 @@ def check_gpu() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="SLM Financial Benchmark Harness")
     parser.add_argument("--tasks", nargs="+", default=list(TASKS.keys()))
+    parser.add_argument("--debug",     action="store_true", help="Run only 3 samples per task")
     parser.add_argument("--no-debug",  action="store_true")
     parser.add_argument("--no-resume", action="store_true")
     args = parser.parse_args()
@@ -179,7 +207,7 @@ def main() -> None:
     log("\n[SYSTEM CHECK]")
     check_gpu()
 
-    debug   = DEBUG_MODE and not args.no_debug
+    debug   = (DEBUG_MODE or args.debug) and not args.no_debug
     results = {} if args.no_resume else load_results()
 
     if debug:

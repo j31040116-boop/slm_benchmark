@@ -4,7 +4,7 @@ prompts.py — Task-specific prompt templates.
 Each function receives a text string and returns the full prompt sent to the
 model.  The model is instructed to:
   1. Reason inside <think>…</think> tags.
-  2. Return a final answer inside [[result]]…[[/result]] tags.
+  2. Return a final answer on the line: Answer: <value>
 
 Swap or extend these functions to experiment with different prompt styles.
 """
@@ -43,9 +43,9 @@ def fiqasa_prompt(text: str) -> str:
 def finer_ord_prompt(text: str) -> str:
     return _wrap(
         "You are a Named Entity Recognition expert for financial documents. "
-        "Does the following token belong to a named entity (such as an "
-        "organisation, person, or location)? Reply with exactly one of: "
-        "entity or O (if not an entity).",
+        "Given the sentence and the target token below, does the token belong "
+        "to a named entity (such as an organisation, person, or location)? "
+        "Reply with exactly one of: entity or O (if not an entity).",
         text,
     )
 
@@ -67,10 +67,10 @@ def fomc_prompt(text: str) -> str:
     )
 
 
-def ectsum_prompt(text: str) -> str:
+def finnews_prompt(text: str) -> str:
     return _wrap(
-        "Classify the overall sentiment of the following earnings call transcript "
-        "summary as exactly one of: negative, neutral, or positive.",
+        "Classify the overall sentiment of the following financial news text "
+        "as exactly one of: negative, neutral, or positive.",
         text,
     )
 
@@ -90,7 +90,7 @@ PROMPT_FN = {
     "FiNER-ORD": finer_ord_prompt,
     "ConvFinQA": convfinqa_prompt,
     "FOMC":      fomc_prompt,
-    "ECTSum":    ectsum_prompt,
+    "FinSent":   finnews_prompt,
     "ACL18":     acl18_prompt,
 }
 

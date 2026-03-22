@@ -18,7 +18,7 @@ tasks_meta = {
     "FiNER-ORD": {"full_name": "Financial NER (FiNER-ORD)",         "type": "classification", "metric": "accuracy"},
     "ConvFinQA": {"full_name": "Conversational Financial QA",       "type": "exact_match",    "metric": "exact_match"},
     "FOMC":      {"full_name": "FOMC Communication Stance",         "type": "classification", "metric": "accuracy"},
-    "ECTSum":    {"full_name": "Earnings Call Transcript Sentiment", "type": "classification", "metric": "accuracy"},
+    "FinSent":   {"full_name": "Financial News Sentiment (nickmuchi/financial-classification)", "type": "classification", "metric": "accuracy"},
     "ACL18":     {"full_name": "Twitter Financial News Sentiment",   "type": "classification", "metric": "accuracy"},
 }
 
@@ -26,6 +26,8 @@ tasks_meta = {
 summary_tasks = {}
 total_samples = 0
 for task, d in raw.items():
+    if task not in tasks_meta:
+        continue  # skip stale/renamed task keys (e.g. old "ECTSum" → "FinSent")
     m = d.get("metrics", {})
     n = d.get("n_samples", 0)
     total_samples += n
@@ -49,9 +51,9 @@ organized = {
         "date_organized":  datetime.now().strftime("%Y-%m-%d"),
         "total_samples":   total_samples,
         "n_tasks":         len(raw),
-        "workers":         6,
+        "workers":         8,
         "max_tokens":      1536,
-        "num_ctx":         2048,
+        "num_ctx":         4096,
     },
     "summary": summary_tasks,
     "per_task_detail": {

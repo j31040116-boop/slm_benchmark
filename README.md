@@ -15,7 +15,7 @@ Evaluation harness for small language models (SLMs) on financial NLP tasks, usin
 | FiNER-ORD | Financial NER (token-level) | Binary classification | Accuracy, Macro-F1 | 1,000 |
 | ConvFinQA | Conversational Financial QA | Numeric exact match | Exact Match % | 1,490 |
 | FOMC | FOMC Communication Stance | Stance (3-class) | Accuracy, Macro-F1 | 496 |
-| ECTSum | Earnings Call Transcript Sentiment | Sentiment (3-class) | Accuracy, Macro-F1 | 506 |
+| FinSent | Financial News Sentiment (`nickmuchi/financial-classification`) | Sentiment (3-class) | Accuracy, Macro-F1 | 506 |
 | ACL18 | Twitter Financial News Sentiment | Sentiment (3-class) | Accuracy, Macro-F1 | 2,388 |
 
 ---
@@ -151,5 +151,5 @@ Results are stored in `benchmark_results.json` in organized format with `run_inf
 | FiNER-ORD | 1,000 | 0.768 | 0.067 | needs rerun |
 | ConvFinQA | 1,490 | — | — | 8.9% EM, needs rerun |
 | FOMC | 496 | 0.389 | 0.102 | needs rerun |
-| ECTSum | 506 | 0.480 | 0.120 | needs rerun |
+| FinSent | 506 | 0.480 | 0.120 | needs rerun |
 | ACL18 | 2,388 | 0.484 | 0.045 | complete (fixed run) |
